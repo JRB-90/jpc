@@ -17,6 +17,19 @@
 .org $8000
 
 Main:
+    LDA #$77
+    STA $2222
+    LDA #$00
+    LDA $2222
+    STA $3333
+    CMP #$77
+    BNE NotEq
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+NotEq:
     JMP Main
 
 Reset:

@@ -6,13 +6,12 @@ module J6502_System (
     input               phi1,
     input               phi2,
     input               res_n,
-    input       [7:0]   data_in,
+    input       [7:0]   cpu_data_in,
 
+    output              rw_n,
     output      [15:0]  address,
-    output      [7:0]   data_out
+    output      [7:0]   cpu_data_out
 );
-
-wire            rw_n;
 
 CPU_6502 cpu(
     .clk(fst_clk),
@@ -24,8 +23,8 @@ CPU_6502 cpu(
     .irq(1),
     .rw(rw_n),
     .ab(address),
-    .dbi(data_in),
-    .dbo(data_out)
+    .dbi(cpu_data_in),
+    .dbo(cpu_data_out)
 );
 
 VIA_6522 via1(
