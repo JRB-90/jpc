@@ -1,0 +1,39 @@
+.debuginfo +
+.setcpu "65c02"
+.macpack longbranch
+.list on
+
+; Defines to go here
+
+.feature org_per_seg
+.segment "ZEROPAGE"
+.zeropage
+.org $0000
+
+; Zeropage variable reservations to go here
+
+; Main code
+.segment "CODE"
+.org $8000
+
+Main:
+    JMP Main
+
+Reset:
+    LDX #$FF
+    TXS                     ; Set stack pointer
+    CLI                     ; enable interupts
+    JMP Main
+
+IRQ:
+    RTI
+
+NMI:
+    RTI
+
+; Interupt vectors
+.segment "VECTORS"
+.org $FFFA
+	.word	NMI
+	.word	Reset
+	.word	IRQ
