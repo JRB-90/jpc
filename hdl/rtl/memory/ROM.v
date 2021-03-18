@@ -2,7 +2,7 @@
 // GENERATION: STANDARD
 // VERSION: WM1.0
 // MODULE: altsyncram 
-     
+
 // ============================================================
 // File Name: ROM.v
 // Megafunction Name(s):
@@ -16,7 +16,7 @@
 //
 // 16.1.0 Build 196 10/24/2016 SJ Lite Edition
 // ************************************************************
-
+ 
 
 //Copyright (C) 2016  Intel Corporation. All rights reserved.
 //Your use of Intel Corporation's design tools, logic functions 
