@@ -4,7 +4,7 @@
 .list on
 
 ; Defines to go here
-VIA1       	    =	$6000      ; The base address of the 6522 Versatile Interface Adapter is $A000.
+VIA1       	    =	$6000       ; The base address of the 6522 Versatile Interface Adapter is $A000.
 V1_PB           = 	VIA1        ; Its port B is at that address.
 V1_PA           =   VIA1+1      ; Its port A is at address $6001.
 V1_DDRB         =   VIA1+2      ; Its data-direction register for port B is at $6002.
@@ -22,16 +22,20 @@ V1_IFR          =   VIA1+13     ; The interrupt  flag  register is at $600D.
 V1_IER          =   VIA1+14     ; The interrupt enable register is at $600E.
 V1_PANH         =   VIA1+15     ; Same as PA except without handshaking
 
+ACIA1           =   $5000       ; Base address of 6551 ACIA uart chip
+A1_DATA         =   ACIA1       ; Transmit/Recieve buffer and data register
+A1_STATUS       =   ACIA1+1     ; Status register or reset if write
+A1_COMMAND      =   ACIA1+2     ; Command register
+A1_CONTROL      =   ACIA1+3     ; Control register
+
+VRAM            =   $2000       ; Base address for VRAM
+
 .feature org_per_seg
 .segment "ZEROPAGE"
 .zeropage
 .org $0000
 
-; Zeropage variable reservations to go here
-Timer1_Count:
-	.res 1
-Output_Leds:
-    .res 1
+.include "zeropage.asm"
 
 ; Main code
 .segment "CODE"
@@ -44,9 +48,15 @@ Main:
     INC Output_Leds
     LDA #$00
     STA Timer1_Count
+    LDA #$4A
+    STA A1_DATA
 Not1Sec:
     LDA Output_Leds
     STA V1_PA
+
+    JSR ProcessAscii
+    INC CurrentChar
+
     JMP Main
 
 SetupVIA1:
@@ -54,8 +64,6 @@ SetupVIA1:
     STA Timer1_Count
     LDA #$FF                ; Set all of Port A to outputs
     STA V1_DDRA
-    LDA #%10101010
-    STA V1_PA
     LDA #%01000000          ; Set Timer 1 to free running mode
     STA V1_ACR
     LDA #%11000000          ; Set up interupt enables
@@ -66,13 +74,26 @@ SetupVIA1:
     STA V1_T1CH
     RTS
 
+SetupACIA1:
+    STA A1_STATUS
+    LDA #%00011011
+    STA A1_COMMAND
+    LDA #%00011110
+    STA A1_CONTROL
+    RTS
+
 Reset:
     LDX #$FF
     TXS                     ; Set stack pointer
     LDA #$00                ; Reset count
     STA Timer1_Count
     STA Output_Leds
+    STA CurrentChar
+    STA CursorCol
+    STA CursorRow
+    JSR CalcNewCursorPos
     JSR SetupVIA1
+    JSR SetupACIA1
     CLI                     ; enable interupts
     JMP Main
 
@@ -89,6 +110,9 @@ IRQ:
 
 NMI:
     RTI
+
+.include "math.asm"
+.include "video.asm"
 
 ; Interupt vectors
 .segment "VECTORS"
