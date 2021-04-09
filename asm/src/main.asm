@@ -43,8 +43,6 @@ VRAM            =   $2000       ; Base address for VRAM
 .org $8000
 
 Main:
-    ;JMP COLD_START
-    JMP StartJasic
 
     JMP Main
 
@@ -92,11 +90,9 @@ Reset:
     JSR CalcNewCursorPos
     JSR ClearScreen
     CLI                     ; enable interupts
-
     JSR SetupVIA1
     JSR SetupACIA1
     JSR Wait50ms
-    
     JMP Main
 
 IRQ:
@@ -124,8 +120,8 @@ NMI:
 
 .include "math.asm"
 .include "video.asm"
-.include "jasic.asm"
 .include "time.asm"
+.include "basic.asm"
 
 ; Interupt vectors
 .segment "VECTORS"

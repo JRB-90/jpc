@@ -2,11 +2,14 @@
 
 ;================= JASIC ZP =================
 
-.include "jasiczp.asm"
+;.include "jasiczp.asm"
 
 ;================== JOS ZP ==================
 
-.org USRRAM
+.org $00E2
+
+CursorPos:
+    .res 2
 
 ; Screen buffer variables
 CursorCol:

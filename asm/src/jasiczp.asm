@@ -63,9 +63,6 @@ LINNUM:
 TXPSV:
 	.res 2
 
-CursorPos:
-    .res 2
-
 INPUTBUFFER:
 
 .org ZP_START3
