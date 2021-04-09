@@ -1,3 +1,4 @@
+.feature force_range
 .debuginfo +
 .setcpu "65c02"
 .macpack longbranch
@@ -42,67 +43,77 @@ VRAM            =   $2000       ; Base address for VRAM
 .org $8000
 
 Main:
-    LDA Timer1_Count
-    CMP #$C8
-    BCC Not1Sec
-    INC Output_Leds
-    LDA #$00
-    STA Timer1_Count
-    LDA #$4A
-    STA A1_DATA
-Not1Sec:
-    LDA Output_Leds
-    STA V1_PA
-
-    JSR ProcessAscii
-    INC CurrentChar
+    ;JMP COLD_START
+    JMP StartJasic
 
     JMP Main
 
+HandleVIA1Interupt:
+    LDA V1_T2CL             ; Reset Timer1 interupt flag
+    LDA #$01
+    STA Timer2_Exp
+    RTS
+
+HandleACIA1Interupt:
+    LDA A1_DATA
+    STA A1_DATA
+    RTS
+
 SetupVIA1:
     LDA #$00                ; Reset time1 counter
-    STA Timer1_Count
+    STA Timer2_Exp
+    STA V1_DDRB             ; Set all of Port B to inputs
     LDA #$FF                ; Set all of Port A to outputs
     STA V1_DDRA
-    LDA #%01000000          ; Set Timer 1 to free running mode
+    LDA #$AA
+    STA V1_PA
+    LDA #%00000000          ; Set Timer 2 to one shot mode
     STA V1_ACR
-    LDA #%11000000          ; Set up interupt enables
+    LDA #%10100000          ; Set up interupt enables
     STA V1_IER
-    LDA #$50                ; Load into low and high T1 counter 50,000
-    STA V1_T1CL             ; This will create interupts every 50ms
-    LDA #$C3
-    STA V1_T1CH
     RTS
 
 SetupACIA1:
-    STA A1_STATUS
-    LDA #%00011011
-    STA A1_COMMAND
-    LDA #%00011110
-    STA A1_CONTROL
+    STA A1_STATUS           ; Software reset
+    LDA #%00001011          ; Enable DTR, disable receive IRQ, disable transmit IRQ
+    STA A1_COMMAND          ; Disable echo mode, disable parity
+    LDA #%00011111          ; Setup intenal divider Baud control @ 19,200 Baud
+    STA A1_CONTROL          ; 1 Stop Bit, 8 Data Bits
     RTS
 
 Reset:
     LDX #$FF
     TXS                     ; Set stack pointer
     LDA #$00                ; Reset count
-    STA Timer1_Count
-    STA Output_Leds
+    STA Timer2_Exp
     STA CurrentChar
     STA CursorCol
     STA CursorRow
     JSR CalcNewCursorPos
+    JSR ClearScreen
+    CLI                     ; enable interupts
+
     JSR SetupVIA1
     JSR SetupACIA1
-    CLI                     ; enable interupts
+    JSR Wait50ms
+    
     JMP Main
 
 IRQ:
     PHA                     ; Store registers on the stack
     PHX
     PHY
-    LDA V1_T1CL             ; Reset Timer1 interupt flag
-    INC Timer1_Count
+CheckVIA1:
+    LDA V1_IFR
+    ;AND #%10000000
+    ;BNE CheckACIA1
+    JSR HandleVIA1Interupt
+CheckACIA1:
+    LDA A1_STATUS
+    ;AND #%10000000
+    ; BNE InteruptsDone
+    ; JSR HandleACIA1Interupt
+InteruptsDone:
     PLY                     ; Restore registers from stack
     PLX
     PLA
@@ -113,6 +124,8 @@ NMI:
 
 .include "math.asm"
 .include "video.asm"
+.include "jasic.asm"
+.include "time.asm"
 
 ; Interupt vectors
 .segment "VECTORS"

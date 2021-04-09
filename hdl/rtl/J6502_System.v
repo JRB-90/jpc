@@ -9,8 +9,8 @@
 `ifdef FAKE_BRAM
 // TODO - Include some fake memory here
 `else
-//`include "memory/ROM.v"
-//`include "memory/RAM.v"
+`include "memory/ROM.v"
+`include "memory/RAM.v"
 `endif
 
 module J6502_System (
@@ -21,8 +21,10 @@ module J6502_System (
     input               res_n,
 
     // VIA1 connections
-    output      [7:0]   via1_pa,
-    output      [7:0]   via1_pb,
+    output      [7:0]   via1_pa_out,
+    output      [7:0]   via1_pb_out,
+    input       [7:0]   via1_pa_in,
+    input       [7:0]   via1_pb_in,
 
     // ACIA1 connections
     input               acia1_rx,
@@ -69,15 +71,15 @@ wire    [7:0]       vram_char_out;
 assign rom_sel_n = ~cpu_addr_out[15];
 assign ram_sel_n = ~(rom_sel_n && ~cpu_addr_out[14]);
 assign io_sel_n = ~(rom_sel_n && cpu_addr_out[14]);
-assign via1_sel_n = ~cpu_addr_out[13];
-assign acia1_sel = cpu_addr_out[12] && ~io_sel_n;
+assign via1_sel_n = ~(~io_sel_n && cpu_addr_out[13]);
+assign acia1_sel_n = ~(~io_sel_n && cpu_addr_out[12]);
 assign rom_rd_en = ~rom_sel_n && rw_n ? 1 : 0;
 assign ram_rd_en = ~ram_sel_n && rw_n ? 1 : 0;
 assign ram_wr_en = ~ram_sel_n && ~rw_n ? 1 : 0;
 
 // Data bus MUX
 assign mem_addr_in = cpu_addr_out;
-assign io_data_out = via1_sel_n ? via1_data_out : acia1_data_out;
+assign io_data_out = via1_sel_n ? acia1_data_out : via1_data_out;
 assign cpu_data_in = rom_sel_n ? (ram_sel_n ? io_data_out : ram_data_out) : rom_data_out;
 
 // IRQ combining
@@ -111,10 +113,10 @@ RAM ram(
     // .wren_a(ram_wr_en),
 	// .data_a(cpu_data_out),
 	 
-	.address_a(phi2 ? 16'h2222 : mem_addr_in[14:0]),
+	.address_a(phi2 ? 16'h0000 : mem_addr_in[14:0]),
 	.rden_a(phi2 ? 0 : ram_rd_en),
-	.wren_a(phi2 ? 1 : ram_wr_en),
-	.data_a(phi2 ? 8'h44 : cpu_data_out),
+	.wren_a(phi2 ? 0 : ram_wr_en),
+	.data_a(phi2 ? 8'h00 : cpu_data_out),
 
     .address_b(vram_addr_in),
     .rden_b(vram_buf_rden),
@@ -131,22 +133,24 @@ ROM rom(
 	.q(rom_data_out)
 );
 `endif
- 
+
 VIA_6522 via1(
     .CLK(fst_clk),
     .ENA_4(1),
     .RESET_L(res_n),
     .I_P2_H(phi2),
     .I_RW_L(rw_n),
-    .I_CS1(cpu_addr_out[13]),
-    .I_CS2_L(io_sel_n),
+    .I_CS1(~via1_sel_n),
+    .I_CS2_L(via1_sel_n),
     .I_RS(cpu_addr_out[3:0]),
     .I_DATA(cpu_data_out),
+    .I_PA(via1_pa_in),
+    .I_PB(via1_pb_in),
 
     .O_IRQ_L(via1_irq_n),
     .O_DATA(via1_data_out),
-    .O_PA(via1_pa),
-    .O_PB(via1_pb)
+    .O_PA(via1_pa_out),
+    .O_PB(via1_pb_out)
 );
 
 ACIA_6551 acia1(
@@ -155,18 +159,18 @@ ACIA_6551 acia1(
     .RESET_N(res_n),
     .RW_N(rw_n),
     .IRQ(acia1_irq_n),
-    .CS(acia1_sel),
+    .CS({acia1_sel_n, ~acia1_sel_n}),
     .DI(cpu_data_out),
     .RXDATA_IN(acia1_rx),
     .CTS(acia1_cts_n),
-    .DCD(acia1_dcd_n),
-    .DSR(acia1_dsr_n),
-    
+    .DCD(0),
+    .DSR(0),
     .RS(cpu_addr_out[1:0]),
+
     .DO(acia1_data_out),
     .TXDATA_OUT(acia1_tx),
     .RTS(acia1_rts_n),
-    .DTR(acia1_dtr_n)
+    //.DTR(acia1_dtr_n)
 );
 
 VDU video(

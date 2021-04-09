@@ -1,5 +1,6 @@
 `include "ASCII_To_Char_Address.v"
 `include "Bus_Double_DFF.v"
+`include "Bus_Single_DFF.v"
 `include "Char_To_Color.v"
 `include "Color_Decoder.v"
 `include "Screen_Address_Decoder.v"
@@ -50,7 +51,15 @@ wire	[5:0]	char_addr2;
 wire	[5:0]	char_addr3;
 wire	[7:0]	char_data;
 wire 	[11:0]	color;
+wire 			hs1;
+wire 			hs2;
+wire 			hs3;
+wire 			vs1;
+wire 			vs2;
+wire 			vs3;
 
+assign vga_hs = hs3;
+assign vga_vs = vs3;
 assign back_col[11:0] = { cntl_reg_1[3:0], cntl_reg_1[7:0] };
 assign fore_col[11:0] = { cntl_reg_3[3:0], cntl_reg_2[7:0] };
 assign screen_buf_rden = is_drawing;
@@ -59,8 +68,8 @@ assign screen_buf_addr = buffer_addr;
 VGA_Controller vga_cont(
 	.clk(pixel_clk),
 	.rst_n(rst_n),
-	.vga_hs(vga_hs),
-	.vga_vs(vga_vs),
+	.vga_hs(hs1),
+	.vga_vs(vs1),
 	.is_drawing(is_drawing),
 	.px(px),
 	.py(py)
@@ -73,7 +82,7 @@ Screen_Address_Decoder screen_decode(
 	.buffer_addr(buffer_addr)
 );
 
-Bus_Double_DFF bd1_2(
+Bus_Single_DFF bd1_2(
 	.clk(pixel_clk),
 	.D(char_addr1),
 	.Q(char_addr2)
@@ -116,6 +125,30 @@ Color_Decoder col_decode(
 	.r_out(vga_r),
 	.g_out(vga_g),
 	.b_out(vga_b)
+);
+
+Bus_Single_DFF hs_1(
+	.clk(pixel_clk),
+	.D(hs1),
+	.Q(hs2)
+);
+
+Bus_Double_DFF hs_2(
+	.clk(pixel_clk),
+	.D(hs2),
+	.Q(hs3)
+);
+
+Bus_Single_DFF vs_1(
+	.clk(pixel_clk),
+	.D(vs1),
+	.Q(vs2)
+);
+
+Bus_Double_DFF vs_2(
+	.clk(pixel_clk),
+	.D(vs2),
+	.Q(vs3)
 );
 
 endmodule
